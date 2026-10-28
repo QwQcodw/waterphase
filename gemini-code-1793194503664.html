@@ -1,0 +1,718 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>水之熱力學相圖交互可視化 (P-v 與 T-v)</title>
+    <style>
+        :root {
+            --primary: #1B365D;
+            --accent: #2563EB;
+            --bg: #F8FAFC;
+            --card-bg: #FFFFFF;
+            --border: #E2E8F0;
+            --text: #1E293B;
+            --muted: #64748B;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg);
+            color: var(--text);
+            padding: 20px;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        header h1 {
+            color: var(--primary);
+            font-size: 24px;
+            margin-bottom: 6px;
+        }
+
+        header p {
+            color: var(--muted);
+            font-size: 14px;
+        }
+
+        /* 控制面板 */
+        .controls-card {
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 16px 20px;
+            max-width: 1200px;
+            margin: 0 auto 20px auto;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+        }
+
+        .controls-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)) 120px 100px;
+            gap: 12px;
+            align-items: flex-end;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .form-group label {
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--muted);
+        }
+
+        .form-group input, .form-group select {
+            padding: 8px 12px;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            font-size: 14px;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+
+        .form-group input:focus, .form-group select:focus {
+            border-color: var(--accent);
+        }
+
+        button.btn-primary {
+            background-color: var(--accent);
+            color: white;
+            border: none;
+            border-radius: 6px;
+            padding: 10px 16px;
+            font-weight: 600;
+            font-size: 14px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        button.btn-primary:hover {
+            background-color: #1D4ED8;
+        }
+
+        button.btn-clear {
+            background-color: #EF4444;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            padding: 10px 16px;
+            font-weight: 600;
+            font-size: 14px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        button.btn-clear:hover {
+            background-color: #DC2626;
+        }
+
+        /* 雙圖容器 */
+        .diagrams-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            max-width: 1400px;
+            margin: 0 auto 20px auto;
+        }
+
+        .chart-card {
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 16px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .chart-card h2 {
+            font-size: 16px;
+            color: var(--primary);
+            margin-bottom: 12px;
+            align-self: flex-start;
+        }
+
+        canvas {
+            width: 100%;
+            height: 480px;
+            border-radius: 6px;
+            background: #FFFFFF;
+            cursor: crosshair;
+        }
+
+        /* 狀態列表表格 */
+        .table-card {
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 16px 20px;
+            max-width: 1400px;
+            margin: 0 auto;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+        }
+
+        .table-card h2 {
+            font-size: 16px;
+            color: var(--primary);
+            margin-bottom: 12px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+        }
+
+        th, td {
+            padding: 10px 12px;
+            text-align: center;
+            border-bottom: 1px solid var(--border);
+        }
+
+        th {
+            background-color: #F1F5F9;
+            color: var(--primary);
+            font-weight: 600;
+        }
+
+        tr:hover {
+            background-color: #F8FAFC;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 3px 8px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 600;
+        }
+        .badge-liq { background: #DBEAFE; color: #1E40AF; }
+        .badge-mix { background: #FEF3C7; color: #92400E; }
+        .badge-vap { background: #FEE2E2; color: #991B1B; }
+        .badge-sol { background: #E0E7FF; color: #3730A3; }
+
+        @media (max-width: 900px) {
+            .diagrams-container {
+                grid-template-columns: 1fr;
+            }
+            .controls-grid {
+                grid-template-columns: 1fr 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>水之熱力學狀態相圖繪製系統</h1>
+        <p>左圖：P - v 圖 (對數比容) ｜ 右圖：T - v 圖 (對數比容) ｜ 內建 Table B.1.1 飽和水邊界曲線</p>
+    </header>
+
+    <!-- 輸入控制項 -->
+    <div class="controls-card">
+        <div class="controls-grid">
+            <div class="form-group">
+                <label for="pointLabel">點標籤 (名稱)</label>
+                <input type="text" id="pointLabel" placeholder="例如：State 1">
+            </div>
+            <div class="form-group">
+                <label for="inputP">壓力 P (kPa)</label>
+                <input type="number" id="inputP" step="any" placeholder="例如：500">
+            </div>
+            <div class="form-group">
+                <label for="inputT">溫度 T (°C)</label>
+                <input type="number" id="inputT" step="any" placeholder="例如：100">
+            </div>
+            <div class="form-group">
+                <label for="inputV">比容 v (m³/kg)</label>
+                <input type="number" id="inputV" step="any" placeholder="例如：0.001044">
+            </div>
+            <div class="form-group">
+                <label for="pointColor">標記顏色</label>
+                <select id="pointColor">
+                    <option value="#EF4444">紅色 (Red)</option>
+                    <option value="#10B981">綠色 (Green)</option>
+                    <option value="#F59E0B">橙色 (Orange)</option>
+                    <option value="#8B5CF6">紫色 (Purple)</option>
+                    <option value="#06B6D4">青色 (Cyan)</option>
+                </select>
+            </div>
+            <button class="btn-primary" onclick="addStatePoint()">新增點位</button>
+            <button class="btn-clear" onclick="clearStatePoints()">清除重置</button>
+        </div>
+    </div>
+
+    <!-- 雙相圖視窗 -->
+    <div class="diagrams-container">
+        <div class="chart-card">
+            <h2>壓力和比容圖 (P - v Diagram)</h2>
+            <canvas id="pvCanvas"></canvas>
+        </div>
+        <div class="chart-card">
+            <h2>溫度和比容圖 (T - v Diagram)</h2>
+            <canvas id="tvCanvas"></canvas>
+        </div>
+    </div>
+
+    <!-- 狀態數據列表 -->
+    <div class="table-card">
+        <h2>已標註狀態點列表</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>顏色</th>
+                    <th>點標籤</th>
+                    <th>壓力 P (kPa)</th>
+                    <th>溫度 T (°C)</th>
+                    <th>比容 v (m³/kg)</th>
+                    <th>判定相態 (Phase)</th>
+                    <th>操作</th>
+                </tr>
+            </thead>
+            <tbody id="statesTableBody">
+                <!-- 動態新增列 -->
+            </tbody>
+        </table>
+    </div>
+
+    <script>
+        // 1. Table B.1.1 精確飽和水數據庫 (T, P, vf, vg)
+        const satTable = [
+            { T: 0.01, P: 0.6113, vf: 0.001000, vg: 206.132 },
+            { T: 10, P: 1.2276, vf: 0.001000, vg: 106.377 },
+            { T: 20, P: 2.339, vf: 0.001002, vg: 57.7897 },
+            { T: 30, P: 4.246, vf: 0.001004, vg: 32.8932 },
+            { T: 40, P: 7.384, vf: 0.001008, vg: 19.5229 },
+            { T: 50, P: 12.350, vf: 0.001012, vg: 12.0318 },
+            { T: 60, P: 19.941, vf: 0.001017, vg: 7.67071 },
+            { T: 70, P: 31.19, vf: 0.001023, vg: 5.04217 },
+            { T: 80, P: 47.39, vf: 0.001029, vg: 3.40715 },
+            { T: 90, P: 70.14, vf: 0.001036, vg: 2.36056 },
+            { T: 100, P: 101.3, vf: 0.001044, vg: 1.67290 },
+            { T: 110, P: 143.3, vf: 0.001052, vg: 1.21014 },
+            { T: 120, P: 198.5, vf: 0.001060, vg: 0.89186 },
+            { T: 130, P: 270.1, vf: 0.001070, vg: 0.66850 },
+            { T: 140, P: 361.3, vf: 0.001080, vg: 0.50885 },
+            { T: 150, P: 475.9, vf: 0.001090, vg: 0.39278 },
+            { T: 160, P: 617.8, vf: 0.001102, vg: 0.30706 },
+            { T: 170, P: 791.7, vf: 0.001114, vg: 0.24283 },
+            { T: 180, P: 1002.2, vf: 0.001127, vg: 0.19405 },
+            { T: 190, P: 1254.4, vf: 0.001141, vg: 0.15654 },
+            { T: 200, P: 1553.8, vf: 0.001156, vg: 0.12736 },
+            { T: 210, P: 1906.3, vf: 0.001173, vg: 0.10441 },
+            { T: 220, P: 2317.8, vf: 0.001190, vg: 0.08619 },
+            { T: 230, P: 2794.9, vf: 0.001209, vg: 0.07158 },
+            { T: 240, P: 3344.2, vf: 0.001229, vg: 0.05976 },
+            { T: 250, P: 3973.0, vf: 0.001251, vg: 0.05013 },
+            { T: 260, P: 4688.6, vf: 0.001276, vg: 0.04220 },
+            { T: 270, P: 5498.7, vf: 0.001302, vg: 0.03564 },
+            { T: 280, P: 6411.7, vf: 0.001332, vg: 0.03017 },
+            { T: 290, P: 7436.0, vf: 0.001366, vg: 0.02557 },
+            { T: 300, P: 8581.0, vf: 0.001404, vg: 0.02167 },
+            { T: 310, P: 9856.6, vf: 0.001447, vg: 0.01835 },
+            { T: 320, P: 11274, vf: 0.001499, vg: 0.01549 },
+            { T: 330, P: 12845, vf: 0.001561, vg: 0.01300 },
+            { T: 340, P: 14586, vf: 0.001638, vg: 0.01080 },
+            { T: 350, P: 16514, vf: 0.001740, vg: 0.00881 },
+            { T: 360, P: 18651, vf: 0.001892, vg: 0.00694 },
+            { T: 370, P: 21028, vf: 0.002213, vg: 0.00493 },
+            { T: 374.14, P: 22089, vf: 0.003155, vg: 0.003155 } // Critical point
+        ];
+
+        // 預設四個經典題目狀態
+        let statePoints = [
+            { label: "1 (Comp Liq)", P: 500, T: 100, v: 0.001044, color: "#10B981", phase: "壓縮液體" },
+            { label: "2 (Two-Phase)", P: 2500, T: 223.99, v: 0.0456, color: "#F59E0B", phase: "雙相混合物 (x≈0.56)" },
+            { label: "3 (Superheated)", P: 6000, T: 500, v: 0.05665, color: "#EF4444", phase: "過熱蒸氣" },
+            { label: "4 (Solid-Vapor)", P: 0.369, T: -6, v: 1.0, color: "#8B5CF6", phase: "固-汽混合物" }
+        ];
+
+        // 坐標範圍 (比容 v 採用常用之 Log10 座標以清晰展示液汽兩側)
+        const logVMin = -3.5;  // 10^-3.5 ≈ 0.000316
+        const logVMax = 2.5;   // 10^2.5 ≈ 316
+        const PMin = 0.1;      // 0.1 kPa
+        const PMax = 25000;    // 25,000 kPa (Log 座標)
+        const TMin = -20;      // -20 °C
+        const TMax = 600;      // 600 °C (線性座標)
+
+        const pvCanvas = document.getElementById("pvCanvas");
+        const tvCanvas = document.getElementById("tvCanvas");
+
+        function setupHiDPI(canvas) {
+            const dpr = window.devicePixelRatio || 1;
+            const rect = canvas.getBoundingClientRect();
+            canvas.width = rect.width * dpr;
+            canvas.height = rect.height * dpr;
+            const ctx = canvas.getContext("2d");
+            ctx.scale(dpr, dpr);
+            return { ctx, width: rect.width, height: rect.height };
+        }
+
+        // 坐標映射函數
+        function mapVtoX(v, width, padding) {
+            const logV = Math.log10(Math.max(v, 1e-4));
+            const ratio = (logV - logVMin) / (logVMax - logVMin);
+            return padding.left + ratio * (width - padding.left - padding.right);
+        }
+
+        function mapPtoY(P, height, padding) {
+            // P 也使用 Log 座標呈現較佳跨度
+            const logPMin = Math.log10(PMin);
+            const logPMax = Math.log10(PMax);
+            const logP = Math.log10(Math.max(P, 0.05));
+            const ratio = (logP - logPMin) / (logPMax - logPMin);
+            return height - padding.bottom - ratio * (height - padding.top - padding.bottom);
+        }
+
+        function mapTtoY(T, height, padding) {
+            const ratio = (T - TMin) / (TMax - TMin);
+            return height - padding.bottom - ratio * (height - padding.top - padding.bottom);
+        }
+
+        // 繪製 P-v 圖
+        function drawPVDiagram() {
+            const { ctx, width, height } = setupHiDPI(pvCanvas);
+            const pad = { top: 35, right: 25, bottom: 45, left: 65 };
+
+            ctx.clearRect(0, 0, width, height);
+
+            // 網格與坐標軸
+            ctx.strokeStyle = "#E2E8F0";
+            ctx.lineWidth = 1;
+
+            // v 軸網格 (10^-3, 10^-2, 10^-1, 1, 10, 100)
+            const vTicks = [0.001, 0.01, 0.1, 1, 10, 100];
+            ctx.fillStyle = "#64748B";
+            ctx.font = "11px sans-serif";
+            ctx.textAlign = "center";
+            vTicks.forEach(vt => {
+                const x = mapVtoX(vt, width, pad);
+                ctx.beginPath();
+                ctx.moveTo(x, pad.top);
+                ctx.lineTo(x, height - pad.bottom);
+                ctx.stroke();
+                ctx.fillText(vt >= 1 ? vt : vt.toString(), x, height - pad.bottom + 16);
+            });
+
+            // P 軸網格 (1, 10, 100, 1000, 10000, 22089)
+            const pTicks = [1, 10, 100, 1000, 10000, 22089];
+            ctx.textAlign = "right";
+            pTicks.forEach(pt => {
+                const y = mapPtoY(pt, height, pad);
+                ctx.beginPath();
+                ctx.moveTo(pad.left, y);
+                ctx.lineTo(width - pad.right, y);
+                ctx.stroke();
+                ctx.fillText(pt === 22089 ? "22.1M" : pt, pad.left - 8, y + 4);
+            });
+
+            // 繪製外框軸線
+            ctx.strokeStyle = "#94A3B8";
+            ctx.lineWidth = 1.5;
+            ctx.strokeRect(pad.left, pad.top, width - pad.left - pad.right, height - pad.top - pad.bottom);
+
+            // 軸標題
+            ctx.fillStyle = "#1B365D";
+            ctx.font = "bold 12px sans-serif";
+            ctx.textAlign = "center";
+            ctx.fillText("比容 v [m³/kg] (對數刻度)", pad.left + (width - pad.left - pad.right) / 2, height - 10);
+
+            ctx.save();
+            ctx.translate(18, pad.top + (height - pad.top - pad.bottom) / 2);
+            ctx.rotate(-Math.PI / 2);
+            ctx.fillText("壓力 P [kPa] (對數刻度)", 0, 0);
+            ctx.restore();
+
+            // 繪製飽和邊界曲線 (Dome)
+            ctx.beginPath();
+            ctx.strokeStyle = "#1B365D";
+            ctx.lineWidth = 2.5;
+
+            // 液相線 (vf)
+            for (let i = 0; i < satTable.length; i++) {
+                const x = mapVtoX(satTable[i].vf, width, pad);
+                const y = mapPtoY(satTable[i].P, height, pad);
+                if (i === 0) ctx.moveTo(x, y);
+                else ctx.lineTo(x, y);
+            }
+            // 汽相線 (vg 從臨界點往下)
+            for (let i = satTable.length - 1; i >= 0; i--) {
+                const x = mapVtoX(satTable[i].vg, width, pad);
+                const y = mapPtoY(satTable[i].P, height, pad);
+                ctx.lineTo(x, y);
+            }
+            ctx.stroke();
+
+            // 標示臨界點 (C.P.)
+            const cpX = mapVtoX(0.003155, width, pad);
+            const cpY = mapPtoY(22089, height, pad);
+            ctx.fillStyle = "#1B365D";
+            ctx.beginPath();
+            ctx.arc(cpX, cpY, 4, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.fillText("C.P. (臨界點)", cpX, cpY - 8);
+
+            // 標示三相線 (Triple Line)
+            const tpY = mapPtoY(0.6113, height, pad);
+            ctx.setLineDash([4, 4]);
+            ctx.strokeStyle = "#64748B";
+            ctx.beginPath();
+            ctx.moveTo(mapVtoX(0.001, width, pad), tpY);
+            ctx.lineTo(mapVtoX(206.13, width, pad), tpY);
+            ctx.stroke();
+            ctx.setLineDash([]);
+            ctx.fillStyle = "#64748B";
+            ctx.font = "10px sans-serif";
+            ctx.fillText("三相線 (0.611 kPa)", mapVtoX(1.0, width, pad), tpY - 4);
+
+            // 繪製狀態點
+            drawPoints(ctx, width, height, pad, "pv");
+        }
+
+        // 繪製 T-v 圖
+        function drawTVDiagram() {
+            const { ctx, width, height } = setupHiDPI(tvCanvas);
+            const pad = { top: 35, right: 25, bottom: 45, left: 65 };
+
+            ctx.clearRect(0, 0, width, height);
+
+            // 網格與坐標軸
+            ctx.strokeStyle = "#E2E8F0";
+            ctx.lineWidth = 1;
+
+            // v 軸網格
+            const vTicks = [0.001, 0.01, 0.1, 1, 10, 100];
+            ctx.fillStyle = "#64748B";
+            ctx.font = "11px sans-serif";
+            ctx.textAlign = "center";
+            vTicks.forEach(vt => {
+                const x = mapVtoX(vt, width, pad);
+                ctx.beginPath();
+                ctx.moveTo(x, pad.top);
+                ctx.lineTo(x, height - pad.bottom);
+                ctx.stroke();
+                ctx.fillText(vt >= 1 ? vt : vt.toString(), x, height - pad.bottom + 16);
+            });
+
+            // T 軸網格 (0, 100, 200, 300, 374.1, 500)
+            const tTicks = [0, 100, 200, 300, 374.14, 500];
+            ctx.textAlign = "right";
+            tTicks.forEach(tt => {
+                const y = mapTtoY(tt, height, pad);
+                ctx.beginPath();
+                ctx.moveTo(pad.left, y);
+                ctx.lineTo(width - pad.right, y);
+                ctx.stroke();
+                ctx.fillText(tt === 374.14 ? "374.1" : tt, pad.left - 8, y + 4);
+            });
+
+            // 繪製外框
+            ctx.strokeStyle = "#94A3B8";
+            ctx.lineWidth = 1.5;
+            ctx.strokeRect(pad.left, pad.top, width - pad.left - pad.right, height - pad.top - pad.bottom);
+
+            // 軸標題
+            ctx.fillStyle = "#1B365D";
+            ctx.font = "bold 12px sans-serif";
+            ctx.textAlign = "center";
+            ctx.fillText("比容 v [m³/kg] (對數刻度)", pad.left + (width - pad.left - pad.right) / 2, height - 10);
+
+            ctx.save();
+            ctx.translate(20, pad.top + (height - pad.top - pad.bottom) / 2);
+            ctx.rotate(-Math.PI / 2);
+            ctx.fillText("溫度 T [°C]", 0, 0);
+            ctx.restore();
+
+            // 繪製飽和邊界曲線 (Dome)
+            ctx.beginPath();
+            ctx.strokeStyle = "#1B365D";
+            ctx.lineWidth = 2.5;
+
+            // 液相線 (vf)
+            for (let i = 0; i < satTable.length; i++) {
+                const x = mapVtoX(satTable[i].vf, width, pad);
+                const y = mapTtoY(satTable[i].T, height, pad);
+                if (i === 0) ctx.moveTo(x, y);
+                else ctx.lineTo(x, y);
+            }
+            // 汽相線 (vg)
+            for (let i = satTable.length - 1; i >= 0; i--) {
+                const x = mapVtoX(satTable[i].vg, width, pad);
+                const y = mapTtoY(satTable[i].T, height, pad);
+                ctx.lineTo(x, y);
+            }
+            ctx.stroke();
+
+            // 標示臨界點 (C.P.)
+            const cpX = mapVtoX(0.003155, width, pad);
+            const cpY = mapTtoY(374.14, height, pad);
+            ctx.fillStyle = "#1B365D";
+            ctx.beginPath();
+            ctx.arc(cpX, cpY, 4, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.fillText("C.P. (374.14°C)", cpX, cpY - 8);
+
+            // 繪製狀態點
+            drawPoints(ctx, width, height, pad, "tv");
+        }
+
+        // 標記狀態點輔助函數
+        function drawPoints(ctx, width, height, pad, type) {
+            statePoints.forEach(pt => {
+                if (pt.v === null || pt.v === undefined) return;
+
+                const x = mapVtoX(pt.v, width, pad);
+                let y;
+                if (type === "pv") {
+                    if (pt.P === null || pt.P === undefined) return;
+                    y = mapPtoY(pt.P, height, pad);
+                } else {
+                    if (pt.T === null || pt.T === undefined) return;
+                    y = mapTtoY(pt.T, height, pad);
+                }
+
+                // 標記外環光暈
+                ctx.beginPath();
+                ctx.fillStyle = pt.color + "33";
+                ctx.arc(x, y, 8, 0, Math.PI * 2);
+                ctx.fill();
+
+                // 標記實心點
+                ctx.beginPath();
+                ctx.fillStyle = pt.color;
+                ctx.arc(x, y, 4.5, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.strokeStyle = "#FFFFFF";
+                ctx.lineWidth = 1.5;
+                ctx.stroke();
+
+                // 標記文字
+                ctx.fillStyle = "#0F172A";
+                ctx.font = "bold 11px sans-serif";
+                ctx.textAlign = "left";
+                ctx.fillText(` ${pt.label}`, x + 6, y - 4);
+            });
+        }
+
+        // 智慧相態判定
+        function evaluatePhase(P, T, v) {
+            if (T !== null && T < 0.01) {
+                return "固-汽/固體區";
+            }
+            if (T >= 374.14 || (P !== null && P >= 22089)) {
+                return "超臨界/稠密流體";
+            }
+
+            // 尋找最近飽和溫度
+            if (T !== null) {
+                let satItem = satTable[0];
+                for (let item of satTable) {
+                    if (Math.abs(item.T - T) < Math.abs(satItem.T - T)) {
+                        satItem = item;
+                    }
+                }
+                if (v !== null) {
+                    if (v < satItem.vf) return "壓縮液體 (Subcooled)";
+                    if (v > satItem.vg) return "過熱蒸氣 (Superheated)";
+                    const x = ((v - satItem.vf) / (satItem.vg - satItem.vf)).toFixed(3);
+                    return `雙相混合物 (x≈${x})`;
+                }
+                if (P !== null) {
+                    if (P > satItem.P * 1.03) return "壓縮液體 (Subcooled)";
+                    if (P < satItem.P * 0.97) return "過熱蒸氣 (Superheated)";
+                    return "飽和狀態";
+                }
+            }
+            return "已標註";
+        }
+
+        // 更新表格內容
+        function updateTable() {
+            const tbody = document.getElementById("statesTableBody");
+            tbody.innerHTML = "";
+
+            statePoints.forEach((pt, index) => {
+                const tr = document.createElement("tr");
+
+                let badgeClass = "badge-mix";
+                if (pt.phase.includes("壓縮")) badgeClass = "badge-liq";
+                if (pt.phase.includes("過熱")) badgeClass = "badge-vap";
+                if (pt.phase.includes("固")) badgeClass = "badge-sol";
+
+                tr.innerHTML = `
+                    <td><span style="display:inline-block;width:12px;height:12px;border-radius:50%;background:${pt.color};"></span></td>
+                    <td style="font-weight:600;">${pt.label}</td>
+                    <td>${pt.P !== null ? pt.P.toLocaleString() : "-"}</td>
+                    <td>${pt.T !== null ? pt.T : "-"}</td>
+                    <td>${pt.v !== null ? pt.v : "-"}</td>
+                    <td><span class="badge ${badgeClass}">${pt.phase}</span></td>
+                    <td><button onclick="removePoint(${index})" style="background:none;border:none;color:#EF4444;cursor:pointer;font-weight:600;">刪除</button></td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function redrawAll() {
+            drawPVDiagram();
+            drawTVDiagram();
+            updateTable();
+        }
+
+        // 新增狀態點
+        function addStatePoint() {
+            const label = document.getElementById("pointLabel").value.trim() || `State ${statePoints.length + 1}`;
+            const P = document.getElementById("inputP").value ? parseFloat(document.getElementById("inputP").value) : null;
+            const T = document.getElementById("inputT").value ? parseFloat(document.getElementById("inputT").value) : null;
+            const v = document.getElementById("inputV").value ? parseFloat(document.getElementById("inputV").value) : null;
+            const color = document.getElementById("pointColor").value;
+
+            if (v === null && (P === null || T === null)) {
+                alert("請至少輸入比容 v，以及 (壓力 P 或 溫度 T) 其中之一，才能在圖上正確定位！");
+                return;
+            }
+
+            const phase = evaluatePhase(P, T, v);
+
+            statePoints.push({ label, P, T, v, color, phase });
+
+            // 清空輸入框
+            document.getElementById("pointLabel").value = "";
+            document.getElementById("inputP").value = "";
+            document.getElementById("inputT").value = "";
+            document.getElementById("inputV").value = "";
+
+            redrawAll();
+        }
+
+        function removePoint(index) {
+            statePoints.splice(index, 1);
+            redrawAll();
+        }
+
+        function clearStatePoints() {
+            statePoints = [];
+            redrawAll();
+        }
+
+        // 視窗自適應
+        window.addEventListener("resize", redrawAll);
+
+        // 初始化繪製
+        redrawAll();
+    </script>
+</body>
+</html>
