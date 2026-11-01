@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>水之熱力學相圖 (P-v 與 T-v)</title>
+    <title>熱力學狀態相圖繪製系統 (P-v 與 T-v)</title>
     <style>
         :root {
             --primary: #1B365D;
@@ -32,7 +32,7 @@
 
         header {
             text-align: center;
-            margin: 8px 0 16px 0;
+            margin: 6px 0 16px 0;
         }
 
         header h1 {
@@ -48,7 +48,41 @@
             line-height: 1.4;
         }
 
-        /* 控制面板卡片 */
+        /* 頂部工作流體選擇卡片 */
+        .substance-selector-card {
+            background: linear-gradient(135deg, #1B365D 0%, #2A4365 100%);
+            border-radius: 12px;
+            padding: 14px 16px;
+            max-width: 1200px;
+            margin: 0 auto 14px auto;
+            color: #FFFFFF;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.08);
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .substance-selector-card label {
+            font-size: 13px;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+            color: #E2E8F0;
+        }
+
+        .substance-select {
+            padding: 10px 14px;
+            border-radius: 8px;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            background: #FFFFFF;
+            color: #1E293B;
+            font-size: 15px;
+            font-weight: 700;
+            outline: none;
+            cursor: pointer;
+            width: 100%;
+        }
+
+        /* 輸入控制面板 */
         .controls-card {
             background: var(--card-bg);
             border: 1px solid var(--border);
@@ -172,7 +206,7 @@
             background: #FFFFFF;
         }
 
-        /* 表格區塊自適應滑動 */
+        /* 表格區塊 */
         .table-card {
             background: var(--card-bg);
             border: 1px solid var(--border);
@@ -197,7 +231,7 @@
 
         table {
             width: 100%;
-            min-width: 580px; /* 防止在窄螢幕擠成一團 */
+            min-width: 580px;
             border-collapse: collapse;
             font-size: 12px;
         }
@@ -227,11 +261,16 @@
         .badge-vap { background: #FEE2E2; color: #991B1B; }
         .badge-sol { background: #E0E7FF; color: #3730A3; }
 
-        /* 桌機與平板大螢幕調整 */
         @media (min-width: 768px) {
             body { padding: 20px; }
             header h1 { font-size: 24px; }
             header p { font-size: 14px; }
+            .substance-selector-card {
+                flex-direction: row;
+                align-items: center;
+                justify-content: space-between;
+            }
+            .substance-select { width: 340px; }
             .diagrams-container { grid-template-columns: 1fr 1fr; gap: 20px; }
             .canvas-wrapper { height: 420px; }
             .controls-grid {
@@ -246,9 +285,25 @@
 <body>
 
     <header>
-        <h1>水之熱力學狀態相圖</h1>
-        <p>P-v 圖 ｜ T-v 圖 ｜ 內建 Table B.1.1 飽和水邊界</p>
+        <h1>熱力學狀態相圖繪製系統</h1>
+        <p>支援多種純物質 ｜ P-v 圖 (對數刻度) ｜ T-v 圖 (對數刻度) ｜ 內建 Borgnakke 飽和附表</p>
     </header>
+
+    <!-- 頂部工作流體選擇選單 -->
+    <div class="substance-selector-card">
+        <div>
+            <label for="substanceSelect">📌 選擇工作流體 (Working Fluid)：</label>
+            <div style="font-size: 11px; color: #CBD5E1; margin-top: 2px;">切換後相圖邊界、臨界點與座標刻度將同步自動更新</div>
+        </div>
+        <div>
+            <select id="substanceSelect" class="substance-select" onchange="onSubstanceChange()">
+                <option value="water">水 (Water, H2O) - Table B.1</option>
+                <option value="r134a">冷媒 R-134a - Table B.5</option>
+                <option value="r410a">冷媒 R-410A - Table B.4</option>
+                <option value="nitrogen">氮氣 (Nitrogen, N2) - Table B.6</option>
+            </select>
+        </div>
+    </div>
 
     <!-- 輸入控制項 -->
     <div class="controls-card">
@@ -262,7 +317,7 @@
                 <input type="number" id="inputP" step="any" placeholder="例如：500">
             </div>
             <div class="form-group">
-                <label for="inputT">溫度 T (°C)</label>
+                <label for="inputT" id="labelT">溫度 T (°C)</label>
                 <input type="number" id="inputT" step="any" placeholder="例如：100">
             </div>
             <div class="form-group">
@@ -281,7 +336,7 @@
             </div>
             <div class="btn-group">
                 <button class="btn btn-primary" onclick="addStatePoint()">新增點位</button>
-                <button class="btn btn-clear" onclick="clearStatePoints()">清除</button>
+                <button class="btn btn-clear" onclick="clearStatePoints()">清除全部</button>
             </div>
         </div>
     </div>
@@ -289,13 +344,13 @@
     <!-- 雙相圖視窗 -->
     <div class="diagrams-container">
         <div class="chart-card">
-            <h2>P - v 圖 (壓力 - 比容)</h2>
+            <h2 id="chartTitlePV">P - v 圖 (壓力 - 比容)</h2>
             <div class="canvas-wrapper">
                 <canvas id="pvCanvas"></canvas>
             </div>
         </div>
         <div class="chart-card">
-            <h2>T - v 圖 (溫度 - 比容)</h2>
+            <h2 id="chartTitleTV">T - v 圖 (溫度 - 比容)</h2>
             <div class="canvas-wrapper">
                 <canvas id="tvCanvas"></canvas>
             </div>
@@ -304,7 +359,7 @@
 
     <!-- 狀態數據列表 -->
     <div class="table-card">
-        <h2>已標註狀態點清單</h2>
+        <h2 id="tableTitle">已標註狀態點清單</h2>
         <div class="table-scroll-container">
             <table>
                 <thead>
@@ -312,76 +367,183 @@
                         <th>標記</th>
                         <th>名稱</th>
                         <th>壓力 P (kPa)</th>
-                        <th>溫度 T (°C)</th>
+                        <th id="thT">溫度 T (°C)</th>
                         <th>比容 v (m³/kg)</th>
                         <th>判定相態</th>
                         <th>操作</th>
                     </tr>
                 </thead>
-                <tbody id="statesTableBody">
-                    <!-- 動態新增列 -->
-                </tbody>
+                <tbody id="statesTableBody"></tbody>
             </table>
         </div>
     </div>
 
     <script>
-        // Table B.1.1 飽和水數據 (T, P, vf, vg)
-        const satTable = [
-            { T: 0.01, P: 0.6113, vf: 0.001000, vg: 206.132 },
-            { T: 10, P: 1.2276, vf: 0.001000, vg: 106.377 },
-            { T: 20, P: 2.339, vf: 0.001002, vg: 57.7897 },
-            { T: 30, P: 4.246, vf: 0.001004, vg: 32.8932 },
-            { T: 40, P: 7.384, vf: 0.001008, vg: 19.5229 },
-            { T: 50, P: 12.350, vf: 0.001012, vg: 12.0318 },
-            { T: 60, P: 19.941, vf: 0.001017, vg: 7.67071 },
-            { T: 70, P: 31.19, vf: 0.001023, vg: 5.04217 },
-            { T: 80, P: 47.39, vf: 0.001029, vg: 3.40715 },
-            { T: 90, P: 70.14, vf: 0.001036, vg: 2.36056 },
-            { T: 100, P: 101.3, vf: 0.001044, vg: 1.67290 },
-            { T: 110, P: 143.3, vf: 0.001052, vg: 1.21014 },
-            { T: 120, P: 198.5, vf: 0.001060, vg: 0.89186 },
-            { T: 130, P: 270.1, vf: 0.001070, vg: 0.66850 },
-            { T: 140, P: 361.3, vf: 0.001080, vg: 0.50885 },
-            { T: 150, P: 475.9, vf: 0.001090, vg: 0.39278 },
-            { T: 160, P: 617.8, vf: 0.001102, vg: 0.30706 },
-            { T: 170, P: 791.7, vf: 0.001114, vg: 0.24283 },
-            { T: 180, P: 1002.2, vf: 0.001127, vg: 0.19405 },
-            { T: 190, P: 1254.4, vf: 0.001141, vg: 0.15654 },
-            { T: 200, P: 1553.8, vf: 0.001156, vg: 0.12736 },
-            { T: 210, P: 1906.3, vf: 0.001173, vg: 0.10441 },
-            { T: 220, P: 2317.8, vf: 0.001190, vg: 0.08619 },
-            { T: 230, P: 2794.9, vf: 0.001209, vg: 0.07158 },
-            { T: 240, P: 3344.2, vf: 0.001229, vg: 0.05976 },
-            { T: 250, P: 3973.0, vf: 0.001251, vg: 0.05013 },
-            { T: 260, P: 4688.6, vf: 0.001276, vg: 0.04220 },
-            { T: 270, P: 5498.7, vf: 0.001302, vg: 0.03564 },
-            { T: 280, P: 6411.7, vf: 0.001332, vg: 0.03017 },
-            { T: 290, P: 7436.0, vf: 0.001366, vg: 0.02557 },
-            { T: 300, P: 8581.0, vf: 0.001404, vg: 0.02167 },
-            { T: 310, P: 9856.6, vf: 0.001447, vg: 0.01835 },
-            { T: 320, P: 11274, vf: 0.001499, vg: 0.01549 },
-            { T: 330, P: 12845, vf: 0.001561, vg: 0.01300 },
-            { T: 340, P: 14586, vf: 0.001638, vg: 0.01080 },
-            { T: 350, P: 16514, vf: 0.001740, vg: 0.00881 },
-            { T: 360, P: 18651, vf: 0.001892, vg: 0.00694 },
-            { T: 370, P: 21028, vf: 0.002213, vg: 0.00493 },
-            { T: 374.14, P: 22089, vf: 0.003155, vg: 0.003155 }
-        ];
+        // 嚴格校準後的純物質熱力學飽和資料庫
+        const substancesData = {
+            water: {
+                name: "水 (Water, H2O)",
+                tUnit: "°C",
+                pMin: 0.1,
+                pMax: 25000,
+                tMin: -20,
+                tMax: 600,
+                logVMin: -3.5,
+                logVMax: 2.5,
+                vTicks: [0.001, 0.01, 0.1, 1, 10, 100],
+                pTicks: [1, 10, 100, 1000, 10000, 22089],
+                tTicks: [0, 100, 200, 300, 374.14, 500],
+                cp: { T: 374.14, P: 22089, v: 0.003155, label: "C.P. (374.1°C, 22.1MPa)" },
+                satTable: [
+                    { T: 0.01, P: 0.6113, vf: 0.001000, vg: 206.132 },
+                    { T: 10, P: 1.2276, vf: 0.001000, vg: 106.377 },
+                    { T: 20, P: 2.339, vf: 0.001002, vg: 57.7897 },
+                    { T: 30, P: 4.246, vf: 0.001004, vg: 32.8932 },
+                    { T: 40, P: 7.384, vf: 0.001008, vg: 19.5229 },
+                    { T: 50, P: 12.350, vf: 0.001012, vg: 12.0318 },
+                    { T: 60, P: 19.941, vf: 0.001017, vg: 7.67071 },
+                    { T: 70, P: 31.19, vf: 0.001023, vg: 5.04217 },
+                    { T: 80, P: 47.39, vf: 0.001029, vg: 3.40715 },
+                    { T: 90, P: 70.14, vf: 0.001036, vg: 2.36056 },
+                    { T: 100, P: 101.3, vf: 0.001044, vg: 1.67290 },
+                    { T: 110, P: 143.3, vf: 0.001052, vg: 1.21014 },
+                    { T: 120, P: 198.5, vf: 0.001060, vg: 0.89186 },
+                    { T: 130, P: 270.1, vf: 0.001070, vg: 0.66850 },
+                    { T: 140, P: 361.3, vf: 0.001080, vg: 0.50885 },
+                    { T: 150, P: 475.9, vf: 0.001090, vg: 0.39278 },
+                    { T: 160, P: 617.8, vf: 0.001102, vg: 0.30706 },
+                    { T: 170, P: 791.7, vf: 0.001114, vg: 0.24283 },
+                    { T: 180, P: 1002.2, vf: 0.001127, vg: 0.19405 },
+                    { T: 190, P: 1254.4, vf: 0.001141, vg: 0.15654 },
+                    { T: 200, P: 1553.8, vf: 0.001156, vg: 0.12736 },
+                    { T: 220, P: 2317.8, vf: 0.001190, vg: 0.08619 },
+                    { T: 240, P: 3344.2, vf: 0.001229, vg: 0.05976 },
+                    { T: 260, P: 4688.6, vf: 0.001276, vg: 0.04220 },
+                    { T: 280, P: 6411.7, vf: 0.001332, vg: 0.03017 },
+                    { T: 300, P: 8581.0, vf: 0.001404, vg: 0.02167 },
+                    { T: 320, P: 11274, vf: 0.001499, vg: 0.01549 },
+                    { T: 340, P: 14586, vf: 0.001638, vg: 0.01080 },
+                    { T: 360, P: 18651, vf: 0.001892, vg: 0.00694 },
+                    { T: 374.14, P: 22089, vf: 0.003155, vg: 0.003155 }
+                ],
+                defaultPoints: [
+                    { label: "1 (Comp Liq)", P: 500, T: 100, v: 0.001044, color: "#10B981", phase: "壓縮液體" },
+                    { label: "2 (Two-Phase)", P: 2500, T: 223.99, v: 0.0456, color: "#F59E0B", phase: "雙相混合物 (x≈0.56)" },
+                    { label: "3 (Superheated)", P: 6000, T: 500, v: 0.05665, color: "#EF4444", phase: "過熱蒸氣" },
+                    { label: "4 (Solid-Vapor)", P: 0.369, T: -6, v: 1.0, color: "#8B5CF6", phase: "固-汽混合物" }
+                ]
+            },
+            r134a: {
+                name: "冷媒 R-134a",
+                tUnit: "°C",
+                pMin: 20,
+                pMax: 6000,
+                tMin: -50,
+                tMax: 150,
+                logVMin: -3.5,
+                logVMax: 0.2,
+                vTicks: [0.001, 0.005, 0.02, 0.1, 0.5],
+                pTicks: [50, 100, 200, 500, 1000, 4059],
+                tTicks: [-40, -20, 0, 40, 80, 101.1, 140],
+                cp: { T: 101.06, P: 4059.3, v: 0.001993, label: "C.P. (101.1°C, 4.06MPa)" },
+                satTable: [
+                    { T: -40.0, P: 51.8, vf: 0.000705, vg: 0.36081 },
+                    { T: -30.0, P: 84.4, vf: 0.000720, vg: 0.22596 },
+                    { T: -20.0, P: 132.7, vf: 0.000736, vg: 0.14739 },
+                    { T: -10.0, P: 201.7, vf: 0.000753, vg: 0.09952 },
+                    { T: 0.0, P: 292.8, vf: 0.000773, vg: 0.06931 },
+                    { T: 10.0, P: 414.6, vf: 0.000794, vg: 0.04953 },
+                    { T: 20.0, P: 571.6, vf: 0.000817, vg: 0.03606 },
+                    { T: 30.0, P: 770.1, vf: 0.000843, vg: 0.02671 },
+                    { T: 40.0, P: 1016.4, vf: 0.000873, vg: 0.02002 },
+                    { T: 50.0, P: 1317.9, vf: 0.000908, vg: 0.01512 },
+                    { T: 60.0, P: 1681.3, vf: 0.000951, vg: 0.01146 },
+                    { T: 70.0, P: 2116.2, vf: 0.001006, vg: 0.00863 },
+                    { T: 80.0, P: 2633.2, vf: 0.001083, vg: 0.00639 },
+                    { T: 90.0, P: 3244.5, vf: 0.001211, vg: 0.00448 },
+                    { T: 100.0, P: 3972.4, vf: 0.001600, vg: 0.00244 },
+                    { T: 101.06, P: 4059.3, vf: 0.001993, vg: 0.001993 }
+                ],
+                defaultPoints: [
+                    { label: "Sat Vapor (-10°C)", P: 201.7, T: -10, v: 0.09952, color: "#10B981", phase: "飽和蒸氣 (x=1.0)" },
+                    { label: "Comp Liq (20°C, 1MPa)", P: 1000, T: 20, v: 0.000817, color: "#2563EB", phase: "壓縮液體" },
+                    { label: "Superheated (50°C, 300kPa)", P: 300, T: 50, v: 0.085, color: "#EF4444", phase: "過熱蒸氣" }
+                ]
+            },
+            r410a: {
+                name: "冷媒 R-410A",
+                tUnit: "°C",
+                pMin: 30,
+                pMax: 6500,
+                tMin: -70,
+                tMax: 120,
+                logVMin: -3.5,
+                logVMax: 0.2,
+                vTicks: [0.001, 0.005, 0.02, 0.1, 0.5],
+                pTicks: [50, 100, 300, 1000, 3000, 4901],
+                tTicks: [-60, -30, 0, 30, 71.3, 110],
+                cp: { T: 71.34, P: 4901.0, v: 0.002050, label: "C.P. (71.3°C, 4.90MPa)" },
+                satTable: [
+                    { T: -60.0, P: 43.1, vf: 0.000674, vg: 0.49909 },
+                    { T: -50.0, P: 76.5, vf: 0.000694, vg: 0.29288 },
+                    { T: -40.0, P: 128.2, vf: 0.000716, vg: 0.18090 },
+                    { T: -30.0, P: 204.6, vf: 0.000742, vg: 0.11674 },
+                    { T: -20.0, P: 313.1, vf: 0.000771, vg: 0.07823 },
+                    { T: -10.0, P: 462.4, vf: 0.000806, vg: 0.05401 },
+                    { T: 0.0, P: 662.3, vf: 0.000847, vg: 0.03819 },
+                    { T: 10.0, P: 923.9, vf: 0.000898, vg: 0.02747 },
+                    { T: 20.0, P: 1258.9, vf: 0.000962, vg: 0.01996 },
+                    { T: 30.0, P: 1680.1, vf: 0.001047, vg: 0.01452 },
+                    { T: 40.0, P: 2202.9, vf: 0.001168, vg: 0.01042 },
+                    { T: 50.0, P: 2845.8, vf: 0.001358, vg: 0.00718 },
+                    { T: 60.0, P: 3634.3, vf: 0.001740, vg: 0.00445 },
+                    { T: 70.0, P: 4652.7, vf: 0.001820, vg: 0.00282 },
+                    { T: 71.34, P: 4901.0, vf: 0.002050, vg: 0.002050 }
+                ],
+                defaultPoints: [
+                    { label: "P3.30 Init (50°C, 1MPa)", P: 1000, T: 50, v: 0.0334, color: "#EF4444", phase: "過熱蒸氣" },
+                    { label: "Float (600kPa)", P: 600, T: 0, v: 0.038, color: "#F59E0B", phase: "雙相/過熱區" }
+                ]
+            },
+            nitrogen: {
+                name: "氮氣 (Nitrogen, N2)",
+                tUnit: "K",
+                pMin: 5,
+                pMax: 5000,
+                tMin: 50,
+                tMax: 350,
+                logVMin: -3.5,
+                logVMax: 1.0,
+                vTicks: [0.001, 0.005, 0.02, 0.1, 0.5, 2.0],
+                pTicks: [10, 50, 100, 500, 1500, 3390],
+                tTicks: [63.2, 80, 100, 126.2, 200, 300],
+                cp: { T: 126.19, P: 3390.0, v: 0.003210, label: "C.P. (126.2K, 3.39MPa)" },
+                satTable: [
+                    { T: 63.15, P: 12.5, vf: 0.001150, vg: 1.48816 },
+                    { T: 70.0, P: 38.5, vf: 0.001183, vg: 0.52862 },
+                    { T: 77.35, P: 101.3, vf: 0.001241, vg: 0.21639 },
+                    { T: 80.0, P: 136.9, vf: 0.001264, vg: 0.16335 },
+                    { T: 85.0, P: 228.7, vf: 0.001314, vg: 0.10051 },
+                    { T: 90.0, P: 360.6, vf: 0.001372, vg: 0.06466 },
+                    { T: 95.0, P: 542.4, vf: 0.001441, vg: 0.04285 },
+                    { T: 100.0, P: 779.2, vf: 0.001524, vg: 0.02898 },
+                    { T: 105.0, P: 1084.7, vf: 0.001628, vg: 0.01981 },
+                    { T: 110.0, P: 1466.9, vf: 0.001761, vg: 0.01348 },
+                    { T: 115.0, P: 1941.2, vf: 0.001948, vg: 0.00892 },
+                    { T: 120.0, P: 2516.3, vf: 0.002242, vg: 0.00550 },
+                    { T: 125.0, P: 3209.6, vf: 0.002664, vg: 0.00412 },
+                    { T: 126.19, P: 3390.0, vf: 0.003210, vg: 0.003210 }
+                ],
+                defaultPoints: [
+                    { label: "P3.47 (260K, 200kPa)", P: 200, T: 260, v: 0.3858, color: "#10B981", phase: "理想氣體/過熱" },
+                    { label: "Liquid N2 (77.3K, 1atm)", P: 101.3, T: 77.35, v: 0.001241, color: "#2563EB", phase: "飽和液體" }
+                ]
+            }
+        };
 
-        let statePoints = [
-            { label: "1 (Comp Liq)", P: 500, T: 100, v: 0.001044, color: "#10B981", phase: "壓縮液體" },
-            { label: "2 (Two-Phase)", P: 2500, T: 223.99, v: 0.0456, color: "#F59E0B", phase: "雙相混合物 (x≈0.56)" },
-            { label: "3 (Superheated)", P: 6000, T: 500, v: 0.05665, color: "#EF4444", phase: "過熱蒸氣" },
-            { label: "4 (Solid-Vapor)", P: 0.369, T: -6, v: 1.0, color: "#8B5CF6", phase: "固-汽混合物" }
-        ];
-
-        const logVMin = -3.5;
-        const logVMax = 2.5;
-        const PMin = 0.1;
-        const PMax = 25000;
-        const TMin = -20;
-        const TMax = 600;
+        let currentSubstanceKey = "water";
+        let currentSubstance = substancesData.water;
+        let statePoints = JSON.parse(JSON.stringify(currentSubstance.defaultPoints));
 
         const pvCanvas = document.getElementById("pvCanvas");
         const tvCanvas = document.getElementById("tvCanvas");
@@ -398,55 +560,55 @@
 
         function mapVtoX(v, width, padding) {
             const logV = Math.log10(Math.max(v, 1e-4));
-            const ratio = (logV - logVMin) / (logVMax - logVMin);
+            const ratio = (logV - currentSubstance.logVMin) / (currentSubstance.logVMax - currentSubstance.logVMin);
             return padding.left + ratio * (width - padding.left - padding.right);
         }
 
         function mapPtoY(P, height, padding) {
-            const logPMin = Math.log10(PMin);
-            const logPMax = Math.log10(PMax);
-            const logP = Math.log10(Math.max(P, 0.05));
+            const logPMin = Math.log10(currentSubstance.pMin);
+            const logPMax = Math.log10(currentSubstance.pMax);
+            const logP = Math.log10(Math.max(P, currentSubstance.pMin * 0.5));
             const ratio = (logP - logPMin) / (logPMax - logPMin);
             return height - padding.bottom - ratio * (height - padding.top - padding.bottom);
         }
 
         function mapTtoY(T, height, padding) {
-            const ratio = (T - TMin) / (TMax - TMin);
+            const ratio = (T - currentSubstance.tMin) / (currentSubstance.tMax - currentSubstance.tMin);
             return height - padding.bottom - ratio * (height - padding.top - padding.bottom);
         }
 
         function drawPVDiagram() {
             const { ctx, width, height } = setupHiDPI(pvCanvas);
             const pad = { top: 25, right: 15, bottom: 35, left: 52 };
-
             ctx.clearRect(0, 0, width, height);
 
             // 網格線
             ctx.strokeStyle = "#F1F5F9";
             ctx.lineWidth = 1;
 
-            const vTicks = [0.001, 0.01, 0.1, 1, 10, 100];
-            ctx.fillStyle = "#64748B";
-            ctx.font = "10px sans-serif";
-            ctx.textAlign = "center";
-            vTicks.forEach(vt => {
+            currentSubstance.vTicks.forEach(vt => {
                 const x = mapVtoX(vt, width, pad);
                 ctx.beginPath();
                 ctx.moveTo(x, pad.top);
                 ctx.lineTo(x, height - pad.bottom);
                 ctx.stroke();
+                ctx.fillStyle = "#64748B";
+                ctx.font = "10px sans-serif";
+                ctx.textAlign = "center";
                 ctx.fillText(vt >= 1 ? vt : vt.toString(), x, height - pad.bottom + 14);
             });
 
-            const pTicks = [1, 10, 100, 1000, 10000, 22089];
-            ctx.textAlign = "right";
-            pTicks.forEach(pt => {
+            currentSubstance.pTicks.forEach(pt => {
                 const y = mapPtoY(pt, height, pad);
                 ctx.beginPath();
                 ctx.moveTo(pad.left, y);
                 ctx.lineTo(width - pad.right, y);
                 ctx.stroke();
-                ctx.fillText(pt === 22089 ? "22.1M" : pt, pad.left - 6, y + 3);
+                ctx.fillStyle = "#64748B";
+                ctx.font = "10px sans-serif";
+                ctx.textAlign = "right";
+                let text = pt >= 1000 ? (pt / 1000).toFixed(1) + "M" : pt;
+                ctx.fillText(text, pad.left - 6, y + 3);
             });
 
             // 邊框
@@ -467,76 +629,76 @@
             ctx.restore();
 
             // 繪製飽和邊界線
+            const sat = currentSubstance.satTable;
             ctx.beginPath();
             ctx.strokeStyle = "#1B365D";
-            ctx.lineWidth = 2;
+            ctx.lineWidth = 2.2;
 
-            for (let i = 0; i < satTable.length; i++) {
-                const x = mapVtoX(satTable[i].vf, width, pad);
-                const y = mapPtoY(satTable[i].P, height, pad);
+            // 液相線 (vf) 延伸至臨界點
+            for (let i = 0; i < sat.length; i++) {
+                const x = mapVtoX(sat[i].vf, width, pad);
+                const y = mapPtoY(sat[i].P, height, pad);
                 if (i === 0) ctx.moveTo(x, y);
                 else ctx.lineTo(x, y);
             }
-            for (let i = satTable.length - 1; i >= 0; i--) {
-                const x = mapVtoX(satTable[i].vg, width, pad);
-                const y = mapPtoY(satTable[i].P, height, pad);
+            // 汽相線 (vg) 從臨界點前一個點往下延伸，避免頂點重複畫兩次
+            for (let i = sat.length - 2; i >= 0; i--) {
+                const x = mapVtoX(sat[i].vg, width, pad);
+                const y = mapPtoY(sat[i].P, height, pad);
                 ctx.lineTo(x, y);
             }
             ctx.stroke();
 
             // 臨界點
-            const cpX = mapVtoX(0.003155, width, pad);
-            const cpY = mapPtoY(22089, height, pad);
+            const cp = currentSubstance.cp;
+            const cpX = mapVtoX(cp.v, width, pad);
+            const cpY = mapPtoY(cp.P, height, pad);
             ctx.fillStyle = "#1B365D";
             ctx.beginPath();
-            ctx.arc(cpX, cpY, 3.5, 0, Math.PI * 2);
+            ctx.arc(cpX, cpY, 4, 0, Math.PI * 2);
             ctx.fill();
+            ctx.font = "bold 9px sans-serif";
             ctx.fillText("C.P.", cpX, cpY - 6);
 
-            // 狀態點
             drawPoints(ctx, width, height, pad, "pv");
         }
 
         function drawTVDiagram() {
             const { ctx, width, height } = setupHiDPI(tvCanvas);
             const pad = { top: 25, right: 15, bottom: 35, left: 52 };
-
             ctx.clearRect(0, 0, width, height);
 
-            // 網格線
             ctx.strokeStyle = "#F1F5F9";
             ctx.lineWidth = 1;
 
-            const vTicks = [0.001, 0.01, 0.1, 1, 10, 100];
-            ctx.fillStyle = "#64748B";
-            ctx.font = "10px sans-serif";
-            ctx.textAlign = "center";
-            vTicks.forEach(vt => {
+            currentSubstance.vTicks.forEach(vt => {
                 const x = mapVtoX(vt, width, pad);
                 ctx.beginPath();
                 ctx.moveTo(x, pad.top);
                 ctx.lineTo(x, height - pad.bottom);
                 ctx.stroke();
+                ctx.fillStyle = "#64748B";
+                ctx.font = "10px sans-serif";
+                ctx.textAlign = "center";
                 ctx.fillText(vt >= 1 ? vt : vt.toString(), x, height - pad.bottom + 14);
             });
 
-            const tTicks = [0, 100, 200, 300, 374.14, 500];
-            ctx.textAlign = "right";
-            tTicks.forEach(tt => {
+            currentSubstance.tTicks.forEach(tt => {
                 const y = mapTtoY(tt, height, pad);
                 ctx.beginPath();
                 ctx.moveTo(pad.left, y);
                 ctx.lineTo(width - pad.right, y);
                 ctx.stroke();
-                ctx.fillText(tt === 374.14 ? "374" : tt, pad.left - 6, y + 3);
+                ctx.fillStyle = "#64748B";
+                ctx.font = "10px sans-serif";
+                ctx.textAlign = "right";
+                ctx.fillText(tt, pad.left - 6, y + 3);
             });
 
-            // 邊框
             ctx.strokeStyle = "#CBD5E1";
             ctx.lineWidth = 1.2;
             ctx.strokeRect(pad.left, pad.top, width - pad.left - pad.right, height - pad.top - pad.bottom);
 
-            // 軸標籤
             ctx.fillStyle = "#1B365D";
             ctx.font = "bold 11px sans-serif";
             ctx.textAlign = "center";
@@ -545,37 +707,37 @@
             ctx.save();
             ctx.translate(14, pad.top + (height - pad.top - pad.bottom) / 2);
             ctx.rotate(-Math.PI / 2);
-            ctx.fillText("T [°C]", 0, 0);
+            ctx.fillText(`T [${currentSubstance.tUnit}]`, 0, 0);
             ctx.restore();
 
-            // 繪製飽和邊界線
+            const sat = currentSubstance.satTable;
             ctx.beginPath();
             ctx.strokeStyle = "#1B365D";
-            ctx.lineWidth = 2;
+            ctx.lineWidth = 2.2;
 
-            for (let i = 0; i < satTable.length; i++) {
-                const x = mapVtoX(satTable[i].vf, width, pad);
-                const y = mapTtoY(satTable[i].T, height, pad);
+            for (let i = 0; i < sat.length; i++) {
+                const x = mapVtoX(sat[i].vf, width, pad);
+                const y = mapTtoY(sat[i].T, height, pad);
                 if (i === 0) ctx.moveTo(x, y);
                 else ctx.lineTo(x, y);
             }
-            for (let i = satTable.length - 1; i >= 0; i--) {
-                const x = mapVtoX(satTable[i].vg, width, pad);
-                const y = mapTtoY(satTable[i].T, height, pad);
+            for (let i = sat.length - 2; i >= 0; i--) {
+                const x = mapVtoX(sat[i].vg, width, pad);
+                const y = mapTtoY(sat[i].T, height, pad);
                 ctx.lineTo(x, y);
             }
             ctx.stroke();
 
-            // 臨界點
-            const cpX = mapVtoX(0.003155, width, pad);
-            const cpY = mapTtoY(374.14, height, pad);
+            const cp = currentSubstance.cp;
+            const cpX = mapVtoX(cp.v, width, pad);
+            const cpY = mapTtoY(cp.T, height, pad);
             ctx.fillStyle = "#1B365D";
             ctx.beginPath();
-            ctx.arc(cpX, cpY, 3.5, 0, Math.PI * 2);
+            ctx.arc(cpX, cpY, 4, 0, Math.PI * 2);
             ctx.fill();
+            ctx.font = "bold 9px sans-serif";
             ctx.fillText("C.P.", cpX, cpY - 6);
 
-            // 狀態點
             drawPoints(ctx, width, height, pad, "tv");
         }
 
@@ -614,23 +776,26 @@
         }
 
         function evaluatePhase(P, T, v) {
-            if (T !== null && T < 0.01) return "固-汽/固體區";
-            if (T >= 374.14 || (P !== null && P >= 22089)) return "超臨界/稠密流體";
+            const sat = currentSubstance.satTable;
+            const cp = currentSubstance.cp;
+
+            if (T !== null && T > cp.T && P !== null && P > cp.P) return "超臨界流體 (Supercritical)";
+            if (T !== null && T > cp.T) return "過熱/氣相 (Gas)";
 
             if (T !== null) {
-                let satItem = satTable[0];
-                for (let item of satTable) {
+                let satItem = sat[0];
+                for (let item of sat) {
                     if (Math.abs(item.T - T) < Math.abs(satItem.T - T)) satItem = item;
                 }
                 if (v !== null) {
-                    if (v < satItem.vf) return "壓縮液體";
-                    if (v > satItem.vg) return "過熱蒸氣";
-                    const x = ((v - satItem.vf) / (satItem.vg - satItem.vf)).toFixed(3);
+                    if (v < satItem.vf * 0.99) return "壓縮液體 (Subcooled)";
+                    if (v > satItem.vg * 1.01) return "過熱蒸氣 (Superheated)";
+                    const x = ((v - satItem.vf) / (satItem.vg - satItem.vf)).toFixed(2);
                     return `雙相混合 (x≈${x})`;
                 }
                 if (P !== null) {
-                    if (P > satItem.P * 1.03) return "壓縮液體";
-                    if (P < satItem.P * 0.97) return "過熱蒸氣";
+                    if (P > satItem.P * 1.05) return "壓縮液體 (Subcooled)";
+                    if (P < satItem.P * 0.95) return "過熱蒸氣 (Superheated)";
                     return "飽和狀態";
                 }
             }
@@ -645,8 +810,8 @@
                 const tr = document.createElement("tr");
 
                 let badgeClass = "badge-mix";
-                if (pt.phase.includes("壓縮")) badgeClass = "badge-liq";
-                if (pt.phase.includes("過熱")) badgeClass = "badge-vap";
+                if (pt.phase.includes("壓縮") || pt.phase.includes("液體")) badgeClass = "badge-liq";
+                if (pt.phase.includes("過熱") || pt.phase.includes("氣")) badgeClass = "badge-vap";
                 if (pt.phase.includes("固")) badgeClass = "badge-sol";
 
                 tr.innerHTML = `
@@ -666,6 +831,19 @@
             drawPVDiagram();
             drawTVDiagram();
             updateTable();
+        }
+
+        function onSubstanceChange() {
+            currentSubstanceKey = document.getElementById("substanceSelect").value;
+            currentSubstance = substancesData[currentSubstanceKey];
+
+            document.getElementById("labelT").innerText = `溫度 T (${currentSubstance.tUnit})`;
+            document.getElementById("thT").innerText = `溫度 T (${currentSubstance.tUnit})`;
+            document.getElementById("chartTitlePV").innerText = `${currentSubstance.name} - P-v 圖`;
+            document.getElementById("chartTitleTV").innerText = `${currentSubstance.name} - T-v 圖`;
+
+            statePoints = JSON.parse(JSON.stringify(currentSubstance.defaultPoints));
+            redrawAll();
         }
 
         function addStatePoint() {
@@ -702,7 +880,9 @@
         }
 
         window.addEventListener("resize", redrawAll);
-        redrawAll();
+
+        // 初始化
+        onSubstanceChange();
     </script>
 </body>
 </html>
