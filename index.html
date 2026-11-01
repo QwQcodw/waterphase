@@ -776,30 +776,34 @@
         }
 
         function evaluatePhase(P, T, v) {
-            const sat = currentSubstance.satTable;
-            const cp = currentSubstance.cp;
+    const sat = currentSubstance.satTable;
+    const cp = currentSubstance.cp;
 
-            if (T !== null && T > cp.T && P !== null && P > cp.P) return "超臨界流體 (Supercritical)";
-            if (T !== null && T > cp.T) return "過熱/氣相 (Gas)";
+    if (T !== null && T > cp.T && P !== null && P > cp.P) return "超臨界流體 (Supercritical)";
+    if (T !== null && T > cp.T) return "過熱/氣相 (Gas)";
 
-            if (T !== null) {
-                let satItem = sat[0];
-                for (let item of sat) {
-                    if (Math.abs(item.T - T) < Math.abs(satItem.T - T)) satItem = item;
-                }
-                if (v !== null) {
-                    if (v < satItem.vf * 0.99) return "壓縮液體 (Subcooled)";
-                    if (v > satItem.vg * 1.01) return "過熱蒸氣 (Superheated)";
-                    const x = ((v - satItem.vf) / (satItem.vg - satItem.vf)).toFixed(2);
-                    return `雙相混合 (x≈${x})`;
-                }
-                if (P !== null) {
-                    if (P > satItem.P * 1.05) return "壓縮液體 (Subcooled)";
-                    if (P < satItem.P * 0.95) return "過熱蒸氣 (Superheated)";
-                    return "飽和狀態";
-                }
-            }
-            return "已標註";
+    if (T !== null) {
+        let satItem = sat[0];
+        for (let item of sat) {
+            if (Math.abs(item.T - T) < Math.abs(satItem.T - T)) satItem = item;
+        }
+
+        // 1. 若有給壓力 P，優先以熱力學相態 (P 與 Psat) 判定
+        if (P !== null) {
+            if (P > satItem.P * 1.05) return "壓縮液體 (Subcooled)";
+            if (P < satItem.P * 0.95) return "過熱蒸氣 (Superheated)";
+        }
+
+        // 2. 輔助以比容 v 判定
+        if (v !== null) {
+            if (v < satItem.vf) return "壓縮液體 (Subcooled)";
+            if (v > satItem.vg) return "過熱蒸氣 (Superheated)";
+            const x = Math.max(0, Math.min(1, (v - satItem.vf) / (satItem.vg - satItem.vf))).toFixed(2);
+            return `雙相混合 (x≈${x})`;
+        }
+    }
+    return "已標註";
+
         }
 
         function updateTable() {
