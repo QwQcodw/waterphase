@@ -32,20 +32,21 @@
 
         header {
             text-align: center;
-            margin: 6px 0 16px 0;
+            padding: 12px 0 16px 0;
         }
 
         header h1 {
             color: var(--primary);
-            font-size: 20px;
-            margin-bottom: 4px;
-            line-height: 1.3;
+            font-size: 22px;
+            margin-bottom: 6px;
+            line-height: 1.5;
+            display: block;
         }
 
         header p {
             color: var(--muted);
-            font-size: 12px;
-            line-height: 1.4;
+            font-size: 13px;
+            line-height: 1.5;
         }
 
         /* 頂部工作流體選擇卡片 */
@@ -165,7 +166,7 @@
             border: 1px solid #FECACA;
         }
 
-        /* 雙圖容器：桌機兩欄、手機單欄 */
+        /* 雙圖容器 */
         .diagrams-container {
             display: grid;
             grid-template-columns: 1fr;
@@ -289,7 +290,7 @@
         <p>支援多種純物質 ｜ P-v 圖 (對數刻度) ｜ T-v 圖 (對數刻度) ｜ 內建 Borgnakke 飽和附表</p>
     </header>
 
-    <!-- 頂部工作流體選擇選單 -->
+    <!-- 工作流體選擇選單 -->
     <div class="substance-selector-card">
         <div>
             <label for="substanceSelect">📌 選擇工作流體 (Working Fluid)：</label>
@@ -299,7 +300,7 @@
             <select id="substanceSelect" class="substance-select" onchange="onSubstanceChange()">
                 <option value="water">水 (Water, H2O) - Table B.1</option>
                 <option value="r134a">冷媒 R-134a - Table B.5</option>
-                <option value="r410a">冷媒 R-410A - Table B.4</option>
+                <option value="r410a" selected>冷媒 R-410A - Table B.4</option>
                 <option value="nitrogen">氮氣 (Nitrogen, N2) - Table B.6</option>
             </select>
         </div>
@@ -484,19 +485,19 @@
                 tTicks: [-60, -30, 0, 30, 71.3, 110],
                 cp: { T: 71.34, P: 4901.0, v: 0.002050, label: "C.P. (71.3°C, 4.90MPa)" },
                 satTable: [
-                    { T: -60.0, P: 43.1, vf: 0.000674, vg: 0.49909 },
-                    { T: -50.0, P: 76.5, vf: 0.000694, vg: 0.29288 },
-                    { T: -40.0, P: 128.2, vf: 0.000716, vg: 0.18090 },
-                    { T: -30.0, P: 204.6, vf: 0.000742, vg: 0.11674 },
-                    { T: -20.0, P: 313.1, vf: 0.000771, vg: 0.07823 },
-                    { T: -10.0, P: 462.4, vf: 0.000806, vg: 0.05401 },
-                    { T: 0.0, P: 662.3, vf: 0.000847, vg: 0.03819 },
-                    { T: 10.0, P: 923.9, vf: 0.000898, vg: 0.02747 },
-                    { T: 20.0, P: 1258.9, vf: 0.000962, vg: 0.01996 },
-                    { T: 30.0, P: 1680.1, vf: 0.001047, vg: 0.01452 },
-                    { T: 40.0, P: 2202.9, vf: 0.001168, vg: 0.01042 },
-                    { T: 50.0, P: 2845.8, vf: 0.001358, vg: 0.00718 },
-                    { T: 60.0, P: 3634.3, vf: 0.001740, vg: 0.00445 },
+                    { T: -60.0, P: 43.1, vf: 0.000674, vg: 0.4998 },
+                    { T: -50.0, P: 76.5, vf: 0.000694, vg: 0.2936 },
+                    { T: -40.0, P: 128.2, vf: 0.000716, vg: 0.1816 },
+                    { T: -30.0, P: 204.6, vf: 0.000742, vg: 0.1175 },
+                    { T: -20.0, P: 313.1, vf: 0.000771, vg: 0.0790 },
+                    { T: -10.0, P: 462.4, vf: 0.000806, vg: 0.0548 },
+                    { T: 0.0, P: 662.3, vf: 0.000847, vg: 0.0390 },
+                    { T: 10.0, P: 923.9, vf: 0.000898, vg: 0.0284 },
+                    { T: 20.0, P: 1258.9, vf: 0.000962, vg: 0.0209 },
+                    { T: 30.0, P: 1680.1, vf: 0.001047, vg: 0.0156 },
+                    { T: 40.0, P: 2202.9, vf: 0.001168, vg: 0.0116 },
+                    { T: 50.0, P: 2845.8, vf: 0.001358, vg: 0.00854 },
+                    { T: 60.0, P: 3634.3, vf: 0.001550, vg: 0.00619 },
                     { T: 70.0, P: 4652.7, vf: 0.001820, vg: 0.00282 },
                     { T: 71.34, P: 4901.0, vf: 0.002050, vg: 0.002050 }
                 ],
@@ -541,8 +542,8 @@
             }
         };
 
-        let currentSubstanceKey = "water";
-        let currentSubstance = substancesData.water;
+        let currentSubstanceKey = "r410a";
+        let currentSubstance = substancesData.r410a;
         let statePoints = JSON.parse(JSON.stringify(currentSubstance.defaultPoints));
 
         const pvCanvas = document.getElementById("pvCanvas");
@@ -582,7 +583,6 @@
             const pad = { top: 25, right: 15, bottom: 35, left: 52 };
             ctx.clearRect(0, 0, width, height);
 
-            // 網格線
             ctx.strokeStyle = "#F1F5F9";
             ctx.lineWidth = 1;
 
@@ -611,12 +611,10 @@
                 ctx.fillText(text, pad.left - 6, y + 3);
             });
 
-            // 邊框
             ctx.strokeStyle = "#CBD5E1";
             ctx.lineWidth = 1.2;
             ctx.strokeRect(pad.left, pad.top, width - pad.left - pad.right, height - pad.top - pad.bottom);
 
-            // 軸標籤
             ctx.fillStyle = "#1B365D";
             ctx.font = "bold 11px sans-serif";
             ctx.textAlign = "center";
@@ -628,20 +626,17 @@
             ctx.fillText("P [kPa] (對數)", 0, 0);
             ctx.restore();
 
-            // 繪製飽和邊界線
             const sat = currentSubstance.satTable;
             ctx.beginPath();
             ctx.strokeStyle = "#1B365D";
             ctx.lineWidth = 2.2;
 
-            // 液相線 (vf) 延伸至臨界點
             for (let i = 0; i < sat.length; i++) {
                 const x = mapVtoX(sat[i].vf, width, pad);
                 const y = mapPtoY(sat[i].P, height, pad);
                 if (i === 0) ctx.moveTo(x, y);
                 else ctx.lineTo(x, y);
             }
-            // 汽相線 (vg) 從臨界點前一個點往下延伸，避免頂點重複畫兩次
             for (let i = sat.length - 2; i >= 0; i--) {
                 const x = mapVtoX(sat[i].vg, width, pad);
                 const y = mapPtoY(sat[i].P, height, pad);
@@ -649,7 +644,6 @@
             }
             ctx.stroke();
 
-            // 臨界點
             const cp = currentSubstance.cp;
             const cpX = mapVtoX(cp.v, width, pad);
             const cpY = mapPtoY(cp.P, height, pad);
@@ -776,34 +770,31 @@
         }
 
         function evaluatePhase(P, T, v) {
-    const sat = currentSubstance.satTable;
-    const cp = currentSubstance.cp;
+            const sat = currentSubstance.satTable;
+            const cp = currentSubstance.cp;
 
-    if (T !== null && T > cp.T && P !== null && P > cp.P) return "超臨界流體 (Supercritical)";
-    if (T !== null && T > cp.T) return "過熱/氣相 (Gas)";
+            if (T !== null && T > cp.T && P !== null && P > cp.P) return "超臨界流體 (Supercritical)";
+            if (T !== null && T > cp.T) return "過熱/氣相 (Gas)";
 
-    if (T !== null) {
-        let satItem = sat[0];
-        for (let item of sat) {
-            if (Math.abs(item.T - T) < Math.abs(satItem.T - T)) satItem = item;
-        }
+            if (T !== null) {
+                let satItem = sat[0];
+                for (let item of sat) {
+                    if (Math.abs(item.T - T) < Math.abs(satItem.T - T)) satItem = item;
+                }
 
-        // 1. 若有給壓力 P，優先以熱力學相態 (P 與 Psat) 判定
-        if (P !== null) {
-            if (P > satItem.P * 1.05) return "壓縮液體 (Subcooled)";
-            if (P < satItem.P * 0.95) return "過熱蒸氣 (Superheated)";
-        }
+                if (P !== null) {
+                    if (P > satItem.P * 1.05) return "壓縮液體 (Subcooled)";
+                    if (P < satItem.P * 0.95) return "過熱蒸氣 (Superheated)";
+                }
 
-        // 2. 輔助以比容 v 判定
-        if (v !== null) {
-            if (v < satItem.vf) return "壓縮液體 (Subcooled)";
-            if (v > satItem.vg) return "過熱蒸氣 (Superheated)";
-            const x = Math.max(0, Math.min(1, (v - satItem.vf) / (satItem.vg - satItem.vf))).toFixed(2);
-            return `雙相混合 (x≈${x})`;
-        }
-    }
-    return "已標註";
-
+                if (v !== null) {
+                    if (v < satItem.vf) return "壓縮液體 (Subcooled)";
+                    if (v > satItem.vg) return "過熱蒸氣 (Superheated)";
+                    const x = Math.max(0, Math.min(1, (v - satItem.vf) / (satItem.vg - satItem.vf))).toFixed(2);
+                    return `雙相混合 (x≈${x})`;
+                }
+            }
+            return "已標註";
         }
 
         function updateTable() {
@@ -885,7 +876,7 @@
 
         window.addEventListener("resize", redrawAll);
 
-        // 初始化
+        // 頁面初次載入
         onSubstanceChange();
     </script>
 </body>
